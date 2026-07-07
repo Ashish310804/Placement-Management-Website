@@ -1,12 +1,38 @@
 
 
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { apiRequest } from '../api'
 
 export default function StudentRegistration() {
-        const[name,setName]=useState("");
-        const[email,setEmail]=useState("");
-        const[course,setCourse]=useState("");
-        // console.log(name)
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [course, setCourse] = useState('')
+  const [skills, setSkills] = useState('')
+  const [status, setStatus] = useState(null)
+  const navigate = useNavigate()
+
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    if (password !== confirmPassword) {
+      return setStatus({ type: 'error', message: 'Passwords do not match.' })
+    }
+
+    setStatus({ type: 'loading', message: 'Registering your profile...' })
+
+    try {
+      await apiRequest('/student/register', {
+        method: 'POST',
+        body: JSON.stringify({ name, email, password, course, skills }),
+      })
+      setStatus({ type: 'success', message: 'Registration successful! Redirecting to login.' })
+      setTimeout(() => navigate('/login'), 1200)
+    } catch (error) {
+      setStatus({ type: 'error', message: error.message })
+    }
+  }
 
   return (
     <>
