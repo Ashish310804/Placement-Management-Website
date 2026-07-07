@@ -81,25 +81,23 @@ export const registerStudent = async (req, res) => {
     if (!emailRegex.test(email)) return res.status(400).json({ success: false, message: "please provide valid email" })
 
     const existUser = await Student.findOne({ email });
-    // console.log(existUser);
     if (existUser) {
-      res.status(400).json({
+      return res.status(400).json({
         success: false,
         message: "Student Already Registered please Login..."
-      })
+      });
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10)// (password,salt)
-    console.log(hashedPassword);//$2b$10$5dGT4b6/SoYVoECx6BZYuO95SmOHpNPIQ.gdVPXTqA9tip6WiK9/S
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    const student=await Student.create({
+    const student = await Student.create({
       name,
       email,
-      password:hashedPassword,
+      password: hashedPassword,
       course,
       skills,
-      role
-    })
+      role: role || 'student'
+    });
 
 
     res.status(201).json({
@@ -144,15 +142,14 @@ export const loginStudent = async (req, res) => {
       })
     }
      console.log("tken")
-    // token generating
-    let token=jwt.sign({id:student._id,email:student.email},"This is my secret key",{expiresIn:'1d'});
-
+    const jwtSecret = process.env.JWT_SECRET || "This is my secret key";
+    const token = jwt.sign({id: student._id, email: student.email}, jwtSecret, {expiresIn: '1d'});
 
     res.status(200).json({
-      success:true,
-      message:"token generated successfully",
-      token:token
-    })
+      success: true,
+      message: "token generated successfully",
+      token
+    });
 
   }catch(error){
     res.status(500).json({

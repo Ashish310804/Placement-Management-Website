@@ -21,7 +21,8 @@ connectDB();
 app.use('/student',studentRoute)
 app.use('/company',companyRoute)
 
-app.listen(process.env.PORT,()=>{
-    console.log(`Server Running on port ${process.env.PORT}`)
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, ()=>{
+    console.log(`Server Running on port ${PORT}`)
 });
 

@@ -14,13 +14,11 @@ export const verifyToken=async(req,res,next)=>{
 
          const token=authHeader.split(" ")[1];
 
-         const decodedToken=jwt.verify(
+         const decodedToken = jwt.verify(
             token,
-            "This is my secret key"
-         )
-         
-        //  console.log(decodedToken);//email , _id
-         req.user=decodedToken;
+            process.env.JWT_SECRET || "This is my secret key"
+         );
+         req.user = decodedToken;
 
          next();
 
