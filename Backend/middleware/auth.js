@@ -1,28 +1,26 @@
+import jwt from 'jsonwebtoken';
+import Student from '../models/student.js';
 
-import jwt from 'jsonwebtoken'
+export const verifyToken = async (req, res, next) => {
+  try {
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
 
-export const verifyToken=async(req,res,next)=>{
-      try{
-         const authHeader=req.headers.authorization;
-        //   token=bearer dfghjkliutrfghjkl.iutdfcghjiudfhgj.ydfhhjoituyio
-         if(!authHeader){
-            return res.status(401).json({
-                success:false,
-                message:"Token Missing"
-            })
-         }
+    if (!token) {
+      return res.status(401).json({ success: false, message: 'Authentication token is missing.' });
+    }
 
-         const token=authHeader.split(" ")[1];
+    const decodedToken = jwt.verify(token, process.env.JWT_SECRET || 'placement-secret');
+    const student = await Student.findById(decodedToken.id).select('-password');
 
-         const decodedToken = jwt.verify(
-            token,
-            process.env.JWT_SECRET || "This is my secret key"
-         );
-         req.user = decodedToken;
+    if (!student) {
+      return res.status(401).json({ success: false, message: 'User not found.' });
+    }
 
-         next();
-
-      }catch(error){
-        res.status(500).json({message:error.message})
-      }
-} 
+    req.user = decodedToken;
+    req.student = student;
+    next();
+  } catch (error) {
+    return res.status(401).json({ success: false, message: 'Invalid or expired token.' });
+  }
+};

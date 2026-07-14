@@ -1,0 +1,18 @@
+import crypto from 'crypto';
+import bcrypt from 'bcrypt';
+
+export const generateOtp = () => {
+  return crypto.randomInt(100000, 999999).toString();
+};
+
+export const hashOtp = async (otp) => {
+  return bcrypt.hash(otp, 10);
+};
+
+export const compareOtp = async (otp, hashedOtp) => {
+  return bcrypt.compare(otp, hashedOtp);
+};
+
+export const isOtpExpired = (expiresAt) => {
+  return new Date(expiresAt) < new Date();
+};

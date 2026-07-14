@@ -9,29 +9,57 @@ export default function StudentRegistration() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [course, setCourse] = useState('')
   const [skills, setSkills] = useState('')
+  const [otp, setOtp] = useState('')
   const [status, setStatus] = useState(null)
+  const [otpSent, setOtpSent] = useState(false)
+  const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+
+  const handleRequestOtp = async () => {
+    if (!name || !email || !password || !confirmPassword || !course || !skills) {
+      setStatus({ type: 'error', message: 'Please complete all fields before requesting an OTP.' })
+      return
+    }
+
+    if (password !== confirmPassword) {
+      setStatus({ type: 'error', message: 'Passwords do not match.' })
+      return
+    }
+
+    setLoading(true)
+    setStatus({ type: 'loading', message: 'Sending OTP...' })
+
+    try {
+      await apiRequest('/student/otp/request', {
+        method: 'POST',
+        body: JSON.stringify({ email, purpose: 'signup' }),
+      })
+      setOtpSent(true)
+      setStatus({ type: 'success', message: 'OTP sent to your email. Verify it to finish registration.' })
+    } catch (error) {
+      setStatus({ type: 'error', message: error.message })
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleSubmit = async (event) => {
     event.preventDefault()
 
-    if (!name || !email || !password || !confirmPassword || !course || !skills) {
-      return setStatus({ type: 'error', message: 'Please complete all fields before submitting.' })
+    if (!otp) {
+      return setStatus({ type: 'error', message: 'Please enter the OTP received in your email.' })
     }
 
-    if (password !== confirmPassword) {
-      return setStatus({ type: 'error', message: 'Passwords do not match.' })
-    }
-
-    setStatus({ type: 'loading', message: 'Registering your profile...' })
+    setStatus({ type: 'loading', message: 'Verifying OTP and creating your account...' })
 
     try {
-      await apiRequest('/student/register', {
+      const data = await apiRequest('/student/otp/verify', {
         method: 'POST',
-        body: JSON.stringify({ name, email, password, course, skills }),
+        body: JSON.stringify({ name, email, password, course, skills, otp, purpose: 'signup' }),
       })
-      setStatus({ type: 'success', message: 'Registration successful! Redirecting to login.' })
-      setTimeout(() => navigate('/login'), 1200)
+      localStorage.setItem('placement_token', data.token)
+      setStatus({ type: 'success', message: 'Registration successful! Redirecting to dashboard.' })
+      setTimeout(() => navigate('/students'), 1200)
     } catch (error) {
       setStatus({ type: 'error', message: error.message })
     }
@@ -119,10 +147,32 @@ export default function StudentRegistration() {
             </div>
 
             <button
+              type='button'
+              onClick={handleRequestOtp}
+              className='w-full rounded-full border border-emerald-950 px-6 py-4 text-emerald-950 font-semibold transition hover:bg-emerald-50'
+            >
+              {loading ? 'Sending...' : 'Send OTP'}
+            </button>
+
+            {otpSent && (
+              <div>
+                <label className='block text-sm font-medium text-slate-700'>Enter OTP</label>
+                <input
+                  type='text'
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  required
+                  className='mt-3 w-full rounded-3xl border border-emerald-200 bg-slate-50 px-5 py-4 text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200'
+                  placeholder='6-digit OTP'
+                />
+              </div>
+            )}
+
+            <button
               type='submit'
               className='w-full rounded-full bg-emerald-950 px-6 py-4 text-white text-lg font-semibold transition hover:bg-emerald-800'
             >
-              Register
+              Verify OTP & Register
             </button>
           </form>
 

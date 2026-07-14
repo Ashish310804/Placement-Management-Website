@@ -1,16 +1,17 @@
+import express from 'express';
+import { addStudent, getStudent } from '../controllers/studentController.js';
+import { loginController, registerController, googleAuthController } from '../controllers/authController.js';
+import { requestOtpController, verifyOtpController } from '../controllers/otpController.js';
+import { verifyToken } from '../middleware/auth.js';
 
-import { addStudent,getStudent,registerStudent,loginStudent } from '../controllers/studentController.js';
-import express from 'express'
+const router = express.Router();
 
-const router=express.Router();
-
-router.post('/',addStudent);
-
-router.get('/',getStudent);
-
-
-//Register API
-router.post('/register',registerStudent);
-router.post('/login',loginStudent)
+router.post('/', addStudent);
+router.get('/', verifyToken, getStudent);
+router.post('/register', registerController);
+router.post('/login', loginController);
+router.post('/google', googleAuthController);
+router.post('/otp/request', requestOtpController);
+router.post('/otp/verify', verifyOtpController);
 
 export default router;
