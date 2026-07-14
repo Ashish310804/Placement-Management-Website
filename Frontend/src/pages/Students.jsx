@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import StudentCard from '../components/StudentCard'
-import { apiRequest } from '../api'
+import { apiRequest } from '../services/api'
 
 export default function Students(){
   const [students, setStudents] = useState([])

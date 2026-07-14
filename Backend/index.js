@@ -9,14 +9,21 @@ dotenv.config();
 const app=express(); 
 app.use(
     cors({
-      origin: "http://localhost:5173",
+      origin: ["http://localhost:5173", "http://127.0.0.1:5173"],
       credentials: true,
     })
 );
 
-app.use(express.json()); // this parses the data coming from frontend
+app.use(express.json());
 
 connectDB();
+
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'Placement Management API is running',
+  });
+});
 
 app.use('/student',studentRoute)
 app.use('/company',companyRoute)

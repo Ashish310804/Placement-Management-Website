@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import CompanyCard from '../components/CompanyCard'
-import { apiRequest } from '../api'
+import { apiRequest } from '../services/api'
 
 export default function Companies(){
   const [companies, setCompanies] = useState([])

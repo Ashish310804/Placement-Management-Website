@@ -1,6 +1,7 @@
 import Student from "../models/student.js"
 import bcrypt from "bcrypt";
 import jwt from 'jsonwebtoken'
+import { isDatabaseReady, fallbackStudentStore } from '../utils/fallbackStore.js';
 
 const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
 const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
@@ -14,49 +15,53 @@ const emailRegex = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
 
 
 export const addStudent = async (req, res) => {
-  
   try {
     const { name, email, course, skills } = req.body;
 
     if (!name) return res.status(400).json({ success: false, message: "Please provide name" });
-    if (!email) return res.status(400).json({ success: false, message: "Please provide email" })
-
-    if (!emailRegex.test(email)) return res.status(400).json({ success: false, message: "please provide valid email" })
-
+    if (!email) return res.status(400).json({ success: false, message: "Please provide email" });
+    if (!emailRegex.test(email)) return res.status(400).json({ success: false, message: "please provide valid email" });
     if (!course) return res.status(400).json({ success: false, message: "Please provide course" });
-    if (!skills) return res.status(400).json({ success: false, message: "Please provide skills" })
+    if (!skills) return res.status(400).json({ success: false, message: "Please provide skills" });
+
+    if (!isDatabaseReady()) {
+      const student = fallbackStudentStore.create(req.body);
+      return res.status(201).json({
+        success: true,
+        message: "Student created successfully in fallback mode",
+        student,
+      });
+    }
 
     const student = await Student.create(req.body);
     res.status(201).json({
       success: true,
       message: "Student created successfully",
-      student: student
-    })
-  } catch (error) {
-    {
-      res.status(500).json({
-        success: false,
-        message: error.message
-      })
-    }
-  }
-}
-
-export const getStudent = async (req, res) => {
-  try {
-    const student = await Student.find();
-    res.status(200).json({
-      success: true,
-      message: "Successfully reaceived the data",
-      student: student
-    })
+      student,
+    });
   } catch (error) {
     res.status(500).json({
       success: false,
-      message: error.message
-    })
+      message: error.message,
+    });
   }
-}
+};
+
+export const getStudent = async (req, res) => {
+  try {
+    const student = isDatabaseReady() ? await Student.find() : fallbackStudentStore.list();
+    res.status(200).json({
+      success: true,
+      message: "Successfully received the data",
+      student,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message,
+    });
+  }
+};
 
 export const registerStudent = async (req, res) => {
   try {
@@ -80,7 +85,7 @@ export const registerStudent = async (req, res) => {
     
     if (!emailRegex.test(email)) return res.status(400).json({ success: false, message: "please provide valid email" })
 
-    const existUser = await Student.findOne({ email });
+    const existUser = isDatabaseReady() ? await Student.findOne({ email }) : fallbackStudentStore.getByEmail(email);
     if (existUser) {
       return res.status(400).json({
         success: false,
@@ -90,14 +95,23 @@ export const registerStudent = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
-    const student = await Student.create({
-      name,
-      email,
-      password: hashedPassword,
-      course,
-      skills,
-      role: role || 'student'
-    });
+    const student = isDatabaseReady()
+      ? await Student.create({
+          name,
+          email,
+          password: hashedPassword,
+          course,
+          skills,
+          role: role || 'student',
+        })
+      : fallbackStudentStore.create({
+          name,
+          email,
+          password: hashedPassword,
+          course,
+          skills,
+          role: role || 'student',
+        });
 
 
     res.status(201).json({
@@ -122,7 +136,7 @@ export const loginStudent = async (req, res) => {
 
      
 
-     const student=await Student.findOne({email});
+     const student=isDatabaseReady() ? await Student.findOne({email}) : fallbackStudentStore.getByEmail(email);
 
      // checking for existing user
      if(!student){

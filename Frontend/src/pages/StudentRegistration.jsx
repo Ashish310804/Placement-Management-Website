@@ -1,6 +1,6 @@
 ﻿import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { apiRequest } from '../api'
+import { apiRequest } from '../services/api'
 
 export default function StudentRegistration() {
   const [name, setName] = useState('')
