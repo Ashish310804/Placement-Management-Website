@@ -47,7 +47,7 @@ function Navbar(){
                       <span className="rounded-full border border-emerald-200/20 bg-emerald-950/10 px-4 py-2 text-sm font-semibold text-emerald-100">
                         Hi, {auth.user?.name || auth.user?.companyName || auth.user?.email || 'there'}
                       </span>
-                      <Link to={auth.role === 'company' ? '/companies' : '/students'} className="rounded-full border border-emerald-200/20 bg-emerald-950/10 px-5 py-2 text-sm font-semibold text-emerald-100 transition hover:border-emerald-200 hover:bg-emerald-950/20">Dashboard</Link>
+                      <Link to={auth.role === 'company' ? '/dashboard/company' : '/dashboard/student'} className="rounded-full border border-emerald-200/20 bg-emerald-950/10 px-5 py-2 text-sm font-semibold text-emerald-100 transition hover:border-emerald-200 hover:bg-emerald-950/20">Dashboard</Link>
                       <button onClick={handleLogout} className="rounded-full bg-emerald-500 px-5 py-2 text-sm font-semibold text-emerald-950 transition hover:bg-emerald-400">Logout</button>
                     </>
                   ) : (

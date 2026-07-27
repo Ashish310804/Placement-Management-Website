@@ -16,7 +16,7 @@ export default function Login() {
   useEffect(() => {
     const auth = getStoredAuth()
     if (auth) {
-      navigate(auth.role === 'company' ? '/companies' : '/students', { replace: true })
+      navigate(auth.role === 'company' ? '/dashboard/company' : '/dashboard/student', { replace: true })
     }
   }, [navigate])
 
@@ -64,7 +64,7 @@ export default function Login() {
       })
 
       setStatus({ type: 'success', message: mode === 'login' ? 'Welcome back! Redirecting...' : 'Registration complete! Redirecting...' })
-      setTimeout(() => navigate(role === 'student' ? '/students' : '/companies'), 700)
+      setTimeout(() => navigate(role === 'student' ? '/dashboard/student' : '/dashboard/company'), 700)
     } catch (error) {
       setStatus({ type: 'error', message: error.message })
     } finally {

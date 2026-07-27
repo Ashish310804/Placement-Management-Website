@@ -51,7 +51,7 @@ export default function StudentRegistration() {
       })
 
       setStatus({ type: 'success', message: 'Registration complete! Redirecting to your dashboard.' })
-      setTimeout(() => navigate('/students'), 800)
+      setTimeout(() => navigate('/dashboard/student'), 800)
     } catch (error) {
       setStatus({ type: 'error', message: error.message })
     } finally {
