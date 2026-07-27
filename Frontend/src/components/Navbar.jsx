@@ -23,8 +23,8 @@ function Navbar(){
 
     return(
         <>
-          <nav className="bg-emerald-950 text-white shadow-xl shadow-emerald-950/20">
-            <div className="max-w-7xl mx-auto px-6 py-4 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <nav className="sticky top-0 z-40 bg-emerald-950/95 text-white shadow-xl shadow-emerald-950/20 backdrop-blur">
+            <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-4 sm:px-6 md:flex-row md:items-center md:justify-between">
               <div className="flex items-center justify-between gap-6">
                 <div>
                   <h1 className="text-2xl font-bold tracking-tight">Placement Portal</h1>
@@ -33,7 +33,7 @@ function Navbar(){
               </div>
 
               <div className="flex flex-col gap-4 md:flex-row md:items-center md:gap-8">
-                <ul className="flex flex-wrap items-center justify-center gap-6 text-sm font-medium text-emerald-200">
+                <ul className="flex flex-wrap items-center justify-center gap-4 text-sm font-medium text-emerald-200 sm:gap-6">
                   <li className="cursor-pointer transition hover:text-white"><Link to="/">Home</Link></li>
                   <li className="cursor-pointer transition hover:text-white"><Link to="/companies">Companies</Link></li>
                   <li className="cursor-pointer transition hover:text-white"><Link to="/students">Students</Link></li>

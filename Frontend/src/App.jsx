@@ -23,7 +23,7 @@ function App() {
   return(
     <>
       <Navbar/>
-      <main className="min-h-[calc(100vh-200px)]">
+      <main className="min-h-[calc(100vh-200px)] bg-slate-50">
         <Routes>
           <Route path='/' element={<Home/>} />
           <Route path='/companies' element={<Companies/>} />

@@ -52,6 +52,52 @@ export function clearAuth() {
   window.dispatchEvent(new Event('placement-auth-changed'));
 }
 
+function updateStoredAccount(accountId, role, email, updates) {
+  const accounts = getLocalAccounts();
+  const normalizedEmail = email?.toLowerCase();
+  const updatedAccounts = accounts.map((account) => {
+    const matchesAccount =
+      (accountId && account.id === accountId) ||
+      (role && account.role === role && normalizedEmail && account.email === normalizedEmail);
+
+    if (!matchesAccount) {
+      return account;
+    }
+
+    return {
+      ...account,
+      profile: {
+        ...(account.profile || {}),
+        ...updates,
+      },
+    };
+  });
+
+  localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(updatedAccounts));
+}
+
+export function updateStoredUser(updates) {
+  const auth = getStoredAuth();
+
+  if (!auth?.user) {
+    throw new Error('No active profile found.');
+  }
+
+  const nextUser = {
+    ...auth.user,
+    ...updates,
+  };
+
+  updateStoredAccount(nextUser.id, auth.role, nextUser.email, updates);
+  saveAuth({
+    token: auth.token,
+    user: nextUser,
+    role: auth.role,
+  });
+
+  return nextUser;
+}
+
 export function getLocalAccounts() {
   return readJson(ACCOUNTS_KEY, []);
 }
