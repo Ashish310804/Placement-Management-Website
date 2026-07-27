@@ -7,7 +7,13 @@ import Students from "./pages/Students"
 import About from "./pages/About"
 import Contact from "./pages/Contact"
 import Login from "./pages/Login"
-import { Routes, Route } from 'react-router-dom'
+import { Navigate, Routes, Route } from 'react-router-dom'
+import { getStoredAuth } from './utils/auth'
+
+function ProtectedRoute({ children }) {
+  const auth = getStoredAuth()
+  return auth ? children : <Navigate to='/login' replace />
+}
 
 function App() {
   return(
@@ -16,8 +22,8 @@ function App() {
       <main className="min-h-[calc(100vh-200px)]">
         <Routes>
           <Route path='/' element={<Home/>} />
-          <Route path='/companies' element={<Companies/>} />
-          <Route path='/students' element={<Students/>} />
+          <Route path='/companies' element={<ProtectedRoute><Companies/></ProtectedRoute>} />
+          <Route path='/students' element={<ProtectedRoute><Students/></ProtectedRoute>} />
           <Route path='/about' element={<About/>} />
           <Route path='/contact' element={<Contact/>} />
           <Route path='/register' element={<StudentRegistration/>} />

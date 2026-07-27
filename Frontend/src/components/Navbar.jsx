@@ -1,7 +1,26 @@
-
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { clearAuth, getStoredAuth } from '../utils/auth'
 
 function Navbar(){
+    const [auth, setAuth] = useState(getStoredAuth())
+
+    useEffect(() => {
+        const syncAuth = () => setAuth(getStoredAuth())
+        window.addEventListener('placement-auth-changed', syncAuth)
+        window.addEventListener('storage', syncAuth)
+
+        return () => {
+            window.removeEventListener('placement-auth-changed', syncAuth)
+            window.removeEventListener('storage', syncAuth)
+        }
+    }, [])
+
+    const handleLogout = () => {
+        clearAuth()
+        setAuth(null)
+    }
+
     return(
         <>
           <nav className="bg-emerald-950 text-white shadow-xl shadow-emerald-950/20">
@@ -23,8 +42,20 @@ function Navbar(){
                 </ul>
 
                 <div className="flex flex-wrap items-center gap-3">
-                  <Link to="/login" className="rounded-full border border-emerald-200/20 bg-emerald-950/10 px-5 py-2 text-sm font-semibold text-emerald-100 transition hover:border-emerald-200 hover:bg-emerald-950/20">Login</Link>
-                  <Link to="/register" className="rounded-full bg-emerald-500 px-5 py-2 text-sm font-semibold text-emerald-950 transition hover:bg-emerald-400">Register</Link>
+                  {auth ? (
+                    <>
+                      <span className="rounded-full border border-emerald-200/20 bg-emerald-950/10 px-4 py-2 text-sm font-semibold text-emerald-100">
+                        Hi, {auth.user?.name || auth.user?.companyName || auth.user?.email || 'there'}
+                      </span>
+                      <Link to={auth.role === 'company' ? '/companies' : '/students'} className="rounded-full border border-emerald-200/20 bg-emerald-950/10 px-5 py-2 text-sm font-semibold text-emerald-100 transition hover:border-emerald-200 hover:bg-emerald-950/20">Dashboard</Link>
+                      <button onClick={handleLogout} className="rounded-full bg-emerald-500 px-5 py-2 text-sm font-semibold text-emerald-950 transition hover:bg-emerald-400">Logout</button>
+                    </>
+                  ) : (
+                    <>
+                      <Link to="/login" className="rounded-full border border-emerald-200/20 bg-emerald-950/10 px-5 py-2 text-sm font-semibold text-emerald-100 transition hover:border-emerald-200 hover:bg-emerald-950/20">Login</Link>
+                      <Link to="/register" className="rounded-full bg-emerald-500 px-5 py-2 text-sm font-semibold text-emerald-950 transition hover:bg-emerald-400">Register</Link>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

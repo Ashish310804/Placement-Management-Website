@@ -1,6 +1,6 @@
 ﻿import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { apiRequest } from '../services/api'
+import { registerLocalAccount, saveAuth } from '../utils/auth'
 
 export default function StudentRegistration() {
   const [name, setName] = useState('')
@@ -9,15 +9,15 @@ export default function StudentRegistration() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [course, setCourse] = useState('')
   const [skills, setSkills] = useState('')
-  const [otp, setOtp] = useState('')
   const [status, setStatus] = useState(null)
-  const [otpSent, setOtpSent] = useState(false)
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
 
-  const handleRequestOtp = async () => {
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+
     if (!name || !email || !password || !confirmPassword || !course || !skills) {
-      setStatus({ type: 'error', message: 'Please complete all fields before requesting an OTP.' })
+      setStatus({ type: 'error', message: 'Please complete all fields before registering.' })
       return
     }
 
@@ -27,41 +27,35 @@ export default function StudentRegistration() {
     }
 
     setLoading(true)
-    setStatus({ type: 'loading', message: 'Sending OTP...' })
+    setStatus({ type: 'loading', message: 'Creating your account...' })
 
     try {
-      await apiRequest('/student/otp/request', {
-        method: 'POST',
-        body: JSON.stringify({ email, purpose: 'signup' }),
+      const account = registerLocalAccount({
+        role: 'student',
+        email,
+        password,
+        profile: { name, course, skills },
       })
-      setOtpSent(true)
-      setStatus({ type: 'success', message: 'OTP sent to your email. Verify it to finish registration.' })
+
+      saveAuth({
+        token: account.id,
+        user: {
+          id: account.id,
+          email: account.email,
+          role: 'student',
+          name,
+          course,
+          skills,
+        },
+        role: 'student',
+      })
+
+      setStatus({ type: 'success', message: 'Registration complete! Redirecting to your dashboard.' })
+      setTimeout(() => navigate('/students'), 800)
     } catch (error) {
       setStatus({ type: 'error', message: error.message })
     } finally {
       setLoading(false)
-    }
-  }
-
-  const handleSubmit = async (event) => {
-    event.preventDefault()
-
-    if (!otp) {
-      return setStatus({ type: 'error', message: 'Please enter the OTP received in your email.' })
-    }
-
-    setStatus({ type: 'loading', message: 'Verifying OTP and creating your account...' })
-
-    try {
-      const data = await apiRequest('/student/otp/verify', {
-        method: 'POST',
-        body: JSON.stringify({ name, email, password, course, skills, otp, purpose: 'signup' }),
-      })
-      localStorage.setItem('placement_token', data.token)
-      setStatus({ type: 'success', message: 'Registration successful! Redirecting to dashboard.' })
-      setTimeout(() => navigate('/students'), 1200)
-    } catch (error) {
-      setStatus({ type: 'error', message: error.message })
     }
   }
 
@@ -71,7 +65,7 @@ export default function StudentRegistration() {
         <div className='rounded-[32px] bg-white p-10 shadow-2xl shadow-slate-900/10'>
           <p className='text-sm uppercase tracking-[0.35em] text-emerald-900/60'>Student Registration</p>
           <h1 className='mt-4 text-4xl font-bold text-emerald-950'>Create your placement profile</h1>
-          <p className='mt-4 max-w-2xl text-slate-600 leading-7'>Register to share your course, skills, and contact details with recruiting companies.</p>
+          <p className='mt-4 max-w-2xl text-slate-600 leading-7'>Register once and use the same login later to access your account anytime.</p>
 
           <form onSubmit={handleSubmit} className='mt-10 grid gap-6'>
             <div>
@@ -147,32 +141,10 @@ export default function StudentRegistration() {
             </div>
 
             <button
-              type='button'
-              onClick={handleRequestOtp}
-              className='w-full rounded-full border border-emerald-950 px-6 py-4 text-emerald-950 font-semibold transition hover:bg-emerald-50'
-            >
-              {loading ? 'Sending...' : 'Send OTP'}
-            </button>
-
-            {otpSent && (
-              <div>
-                <label className='block text-sm font-medium text-slate-700'>Enter OTP</label>
-                <input
-                  type='text'
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                  required
-                  className='mt-3 w-full rounded-3xl border border-emerald-200 bg-slate-50 px-5 py-4 text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200'
-                  placeholder='6-digit OTP'
-                />
-              </div>
-            )}
-
-            <button
               type='submit'
               className='w-full rounded-full bg-emerald-950 px-6 py-4 text-white text-lg font-semibold transition hover:bg-emerald-800'
             >
-              Verify OTP & Register
+              {loading ? 'Creating...' : 'Register'}
             </button>
           </form>
 
