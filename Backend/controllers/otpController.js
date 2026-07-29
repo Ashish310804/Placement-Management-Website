@@ -1,9 +1,10 @@
 import bcrypt from 'bcrypt';
-import nodemailer from 'nodemailer';
 import Otp from '../models/otp.js';
 import Student from '../models/student.js';
+import CompanyAccount from '../models/companyAccount.js';
 import { createAuthToken, sanitizeUser, validateEmail, validatePassword } from '../services/authService.js';
 import { compareOtp, generateOtp, hashOtp, isOtpExpired } from '../services/otpService.js';
+import { sendOtpEmail } from '../services/emailService.js';
 
 const normalizeEmail = (email) => email.trim().toLowerCase();
 const OTP_TTL_MS = 5 * 60 * 1000;
@@ -11,30 +12,13 @@ const OTP_RATE_LIMIT_MS = 60 * 1000;
 const MAX_ATTEMPTS = 5;
 
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
-
-const sendOtpEmail = async (email, otp) => {
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    return;
-  }
-
-  await transporter.sendMail({
-    from: process.env.EMAIL_USER,
-    to: email,
-    subject: 'Your OTP for Placement Portal',
-    html: `<p>Your OTP is <strong>${otp}</strong>. It expires in 5 minutes.</p>`,
-  });
-};
+const getAccountModel = (role) => (role === 'company' ? CompanyAccount : Student);
+const isValidRole = (role) => role === 'student' || role === 'company';
+const isValidPurpose = (purpose) => purpose === 'signup' || purpose === 'password-reset';
 
 export const requestOtpController = async (req, res) => {
   try {
-    const { email, purpose = 'signup' } = req.body;
+    const { email, purpose = 'signup', role = 'student' } = req.body;
 
     if (!email) {
       return res.status(400).json({ success: false, message: 'Email is required.' });
@@ -45,7 +29,19 @@ export const requestOtpController = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Please provide a valid email address.' });
     }
 
-    const existingOtp = await Otp.findOne({ email: normalizedEmail, purpose });
+    if (!isValidRole(role) || !isValidPurpose(purpose)) {
+      return res.status(400).json({ success: false, message: 'Invalid OTP request.' });
+    }
+
+    const account = await getAccountModel(role).findOne({ email: normalizedEmail });
+    if (purpose === 'signup' && account) {
+      return res.status(409).json({ success: false, message: 'An account with this email already exists.' });
+    }
+    if (purpose === 'password-reset' && !account) {
+      return res.status(404).json({ success: false, message: 'No account was found for this email.' });
+    }
+
+    const existingOtp = await Otp.findOne({ email: normalizedEmail, purpose, role });
     if (existingOtp) {
       const coolDownRemaining = existingOtp.lastSentAt && new Date(existingOtp.lastSentAt).getTime() + OTP_RATE_LIMIT_MS > Date.now();
       if (coolDownRemaining) {
@@ -57,19 +53,25 @@ export const requestOtpController = async (req, res) => {
     const otpHash = await hashOtp(otp);
     const expiresAt = new Date(Date.now() + OTP_TTL_MS);
 
-    await Otp.findOneAndUpdate(
-      { email: normalizedEmail, purpose },
+    const otpRecord = await Otp.findOneAndUpdate(
+      { email: normalizedEmail, purpose, role },
       {
         otpHash,
         expiresAt,
         attempts: 0,
         lastSentAt: new Date(),
         purpose,
+        role,
       },
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    await sendOtpEmail(normalizedEmail, otp);
+    try {
+      await sendOtpEmail({ email: normalizedEmail, otp, purpose });
+    } catch (error) {
+      await Otp.deleteOne({ _id: otpRecord._id });
+      throw error;
+    }
 
     res.status(200).json({ success: true, message: 'OTP sent to your email.' });
   } catch (error) {
@@ -79,7 +81,7 @@ export const requestOtpController = async (req, res) => {
 
 export const verifyOtpController = async (req, res) => {
   try {
-    const { email, otp, password, name, course, skills } = req.body;
+    const { email, otp, password, name, course, skills, companyName, role = 'student' } = req.body;
     const purpose = req.body.purpose || 'signup';
 
     if (!email || !otp) {
@@ -87,7 +89,10 @@ export const verifyOtpController = async (req, res) => {
     }
 
     const normalizedEmail = normalizeEmail(email);
-    const otpEntry = await Otp.findOne({ email: normalizedEmail, purpose });
+    if (!isValidRole(role) || !isValidPurpose(purpose)) {
+      return res.status(400).json({ success: false, message: 'Invalid OTP verification request.' });
+    }
+    const otpEntry = await Otp.findOne({ email: normalizedEmail, purpose, role });
 
     if (!otpEntry) {
       return res.status(404).json({ success: false, message: 'OTP not found. Request a new one.' });
@@ -110,45 +115,46 @@ export const verifyOtpController = async (req, res) => {
       return res.status(401).json({ success: false, message: `Invalid OTP. ${MAX_ATTEMPTS - otpEntry.attempts} attempt(s) remaining.` });
     }
 
-    const existingStudent = await Student.findOne({ email: normalizedEmail });
-    let student;
+    const Account = getAccountModel(role);
+    const existingAccount = await Account.findOne({ email: normalizedEmail });
 
-    if (existingStudent) {
-      if (!existingStudent.password && password) {
-        const hashedPassword = await bcrypt.hash(password, 10);
-        existingStudent.password = hashedPassword;
-        await existingStudent.save();
+    if (!validatePassword(password || '')) {
+      return res.status(400).json({ success: false, message: 'Password must be at least 8 characters long and include uppercase, lowercase, a number, and a special character.' });
+    }
+
+    let account;
+    if (purpose === 'password-reset') {
+      if (!existingAccount) {
+        return res.status(404).json({ success: false, message: 'No account was found for this email.' });
       }
-      student = existingStudent;
+      existingAccount.password = await bcrypt.hash(password, 10);
+      await existingAccount.save();
+      account = existingAccount;
     } else {
-      if (!name || !password || !course || !skills) {
-        return res.status(400).json({ success: false, message: 'Please provide your name, password, course, and skills to create an account.' });
+      if (existingAccount) {
+        return res.status(409).json({ success: false, message: 'An account with this email already exists.' });
       }
-
-      if (!validatePassword(password)) {
-        return res.status(400).json({ success: false, message: 'Password must be at least 8 characters long and include uppercase, lowercase, a number, and a special character.' });
+      if (role === 'student' && (!name || !course || !skills)) {
+        return res.status(400).json({ success: false, message: 'Please provide your name, course, and skills to create an account.' });
+      }
+      if (role === 'company' && !companyName) {
+        return res.status(400).json({ success: false, message: 'Please provide your company name to create an account.' });
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
-      student = await Student.create({
-        name: name.trim(),
-        email: normalizedEmail,
-        password: hashedPassword,
-        course: course.trim(),
-        skills: skills.trim(),
-        role: 'student',
-        authProvider: 'local',
-      });
+      account = role === 'student'
+        ? await Student.create({ name: name.trim(), email: normalizedEmail, password: hashedPassword, course: course.trim(), skills: skills.trim(), role: 'student', authProvider: 'local' })
+        : await CompanyAccount.create({ companyName: companyName.trim(), email: normalizedEmail, password: hashedPassword });
     }
 
     await Otp.deleteOne({ _id: otpEntry._id });
 
-    const token = createAuthToken(student);
+    const token = createAuthToken(account);
     res.status(200).json({
       success: true,
-      message: existingStudent ? 'Login successful.' : 'Account created successfully.',
+      message: purpose === 'password-reset' ? 'Password reset successfully.' : 'Account created successfully.',
       token,
-      user: sanitizeUser(student),
+      user: sanitizeUser(account),
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message || 'OTP verification failed.' });

@@ -1,5 +1,6 @@
 import bcrypt from 'bcrypt';
 import Student from '../models/student.js';
+import CompanyAccount from '../models/companyAccount.js';
 import { createAuthToken, sanitizeUser, validateEmail, validatePassword } from '../services/authService.js';
 
 const normalizeEmail = (email) => email.trim().toLowerCase();
@@ -56,35 +57,40 @@ export const registerController = async (req, res) => {
 
 export const loginController = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, role = 'student' } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ success: false, message: 'Email and password are required.' });
     }
 
     const normalizedEmail = normalizeEmail(email);
-    const student = await Student.findOne({ email: normalizedEmail });
+    if (role !== 'student' && role !== 'company') {
+      return res.status(400).json({ success: false, message: 'Invalid account type.' });
+    }
 
-    if (!student) {
+    const Account = role === 'company' ? CompanyAccount : Student;
+    const account = await Account.findOne({ email: normalizedEmail });
+
+    if (!account) {
       return res.status(401).json({ success: false, message: 'Invalid email or password.' });
     }
 
-    if (student.authProvider !== 'local' || !student.password) {
+    if (role === 'student' && (account.authProvider !== 'local' || !account.password)) {
       return res.status(401).json({ success: false, message: 'Please sign in with Google or use the correct account type.' });
     }
 
-    const isPasswordValid = await bcrypt.compare(password, student.password);
+    const isPasswordValid = await bcrypt.compare(password, account.password);
     if (!isPasswordValid) {
       return res.status(401).json({ success: false, message: 'Invalid email or password.' });
     }
 
-    const token = createAuthToken(student);
+    const token = createAuthToken(account);
 
     res.status(200).json({
       success: true,
       message: 'Login successful.',
       token,
-      user: sanitizeUser(student),
+      user: sanitizeUser(account),
     });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message || 'Login failed.' });
