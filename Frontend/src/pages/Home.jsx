@@ -49,7 +49,7 @@ export const Home = () => {
           </div>
 
           <div className='relative lg:w-5/12'>
-            <img src={heroImage} alt='Students celebrating placement success' className='w-full rounded-[32px] border-4 border-white/10 shadow-2xl shadow-black/20 sm:rounded-[40px] sm:border-8' />
+            <img src={heroImage} alt='Students celebrating placement success' className='w-full h-[300px] sm:h-[400px] lg:h-[550px] object-cover rounded-[32px] border-4 border-white/10 shadow-2xl shadow-black/20 sm:rounded-[40px] sm:border-8' />
             <div className='absolute -bottom-8 left-4 rounded-3xl bg-white p-5 shadow-xl shadow-black/10 sm:left-8'>
               <p className='text-sm text-slate-600'>Recent campus drive scheduled</p>
               <p className='mt-2 font-semibold text-slate-950'>Companies: Google, Microsoft, Amazon</p>
