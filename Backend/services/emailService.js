@@ -1,12 +1,17 @@
-import nodemailer from 'nodemailer';
+import nodemailer from "nodemailer";
 
 const getTransporter = () => {
   if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    throw new Error('Email service is not configured. Set EMAIL_USER and EMAIL_PASS in Backend/.env.');
+    throw new Error(
+      "Email service is not configured. Set EMAIL_USER and EMAIL_PASS."
+    );
   }
 
   return nodemailer.createTransport({
-    service: 'gmail',
+    host: "smtp.gmail.com",
+    port: 587,
+    secure: false, // true only for port 465
+    family: 4,      // 👈 Force IPv4
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
@@ -15,13 +20,19 @@ const getTransporter = () => {
 };
 
 export const sendOtpEmail = async ({ email, otp, purpose }) => {
-  const isPasswordReset = purpose === 'password-reset';
-  const action = isPasswordReset ? 'reset your Placement Portal password' : 'verify your Placement Portal email address';
+  const action =
+    purpose === "password-reset"
+      ? "reset your Placement Portal password"
+      : "verify your Placement Portal email address";
 
   await getTransporter().sendMail({
     from: `Placement Portal <${process.env.EMAIL_USER}>`,
     to: email,
     subject: `Your OTP to ${action}`,
-    html: `<p>Use this one-time password to ${action}:</p><p style="font-size: 24px; font-weight: 700; letter-spacing: 4px;">${otp}</p><p>This code expires in 5 minutes. Do not share it with anyone.</p>`,
+    html: `
+      <p>Use this one-time password to ${action}:</p>
+      <h2>${otp}</h2>
+      <p>This code expires in 5 minutes.</p>
+    `,
   });
 };
