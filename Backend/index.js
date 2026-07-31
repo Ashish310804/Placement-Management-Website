@@ -14,7 +14,9 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
-      "http://127.0.0.1:5173"
+      "http://127.0.0.1:5173",
+      "https://placement-management-website-sszp-940pbgsgt-notnull2.vercel.app",
+      "https://placement-management-website.vercel.app"
     ],
     credentials: true,
   })
