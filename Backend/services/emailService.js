@@ -34,5 +34,6 @@ export const sendOtpEmail = async ({ email, otp, purpose }) => {
       <h2>${otp}</h2>
       <p>This code expires in 5 minutes.</p>
     `,
+    
   });
 };
