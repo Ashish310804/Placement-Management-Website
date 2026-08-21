@@ -12,7 +12,6 @@ test('validateEmail rejects invalid addresses', () => {
   assert.equal(validateEmail('student.example.com'), false);
 });
 
-
 test('validatePassword enforces strong password rules', () => {
   assert.equal(validatePassword('Password1!'), true);
   assert.equal(validatePassword('password1!'), false);
