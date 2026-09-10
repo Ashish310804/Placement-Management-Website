@@ -21,6 +21,7 @@ export const fallbackStudentStore = {
   },
 };
 
+
 export const fallbackCompanyStore = {
   list: () => [...fallbackCompanies],
   getById: (id) => fallbackCompanies.find((company) => company._id === id),
