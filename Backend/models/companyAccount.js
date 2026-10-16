@@ -26,5 +26,4 @@ const companyAccountSchema = new mongoose.Schema(
   },
   { timestamps: true }
 );
-
 export default mongoose.model('CompanyAccount', companyAccountSchema);
